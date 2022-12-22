@@ -689,12 +689,13 @@ end
         
         
         
-    
+
+
 ##########################################################################
 #####        BUY ORDER       ####
 ##########################################################################
 #Get all the prep stuff we need
-function buy_order()
+function buy_order(new_order, everything, current_time)
 all_orders, agent_info, buys_book, sells_book, sl_buys, sl_sells, executed_trades, current_price = get_everything(everything)
 order_id, order_price, order_direction = get_order_info_quicker(new_order)
 fill_price=current_price #Required for local scope vriable
@@ -705,7 +706,7 @@ if isempty(sells_book); buys_book=add_to_book(buys_book, order_price, order_id);
 
 #### MAIN EXECUTION SECTION ####
 continue_executing=1
-#Otherwise - we need to check the buys_book to see if we can fill orders
+#Otherwise - we need to check the sells_book to see if we can fill orders
 while all_orders[order_id][9]!=0 && continue_executing==1 && order_price>=first(sells_book)
     fill_trade_id=sells_book[2][1]; fill_price=first(sells_book)
 
@@ -757,8 +758,71 @@ end #End while loop
 end #End the function
 
 
+
+
+#6. Check to see if sl/tp orders are triggered
+stopped_order_id=check_sl_tp(fill_price, all_orders, order_direction, sl_buys, sl_sells)
+sl_buys, sl_sells = remove_sl_order(stopped_order_id, sl_buys, sl_sells)
+if  stopped_order_id>0;
+    everything = place_order(all_orders[stopped_order_id], everything, 45);  #45 is standing in for "cucrent_time" while testing
+end
+
+
+
+
+
+
+
+##########################################################################
+##########################################################################
+#####           EXECUTION FLOW              ####
+##########################################################################
+##########################################################################
+
+place_order()
+#TAKE IN ORDER INFORMATION
+#Break into some key variables.
+order_id, order_price, order_direction, order_type = get_order_info_quicker(new_order)
+
+### Market Order ###
+if order_type==0
+    ### BUY ###
+    if order_direction==0 
+        buy_order()
+        sl_execute=check_sl_tp()
+        if sl_execute!=nothing; new_order=all_orders[sl_execute]; place_order(new_order); end 
         
+    ### SELL ###
+    elseif order_direction==1
+        sell_order()
+        sl_execute=check_sl_tp()
+        if sl_execute!=nothing; new_order=all_orders[sl_execute]; place_order(new_order); end 
+
+    end #End buy/sell
+
+### Limit Order ###
+if order_type==1    
+    ### BUY ###
+    if order_direction==0 
+        buy_order()
+        sl_execute=check_sl_tp()
+        if sl_execute!=nothing; new_order=all_orders[sl_execute]; place_order(new_order); end 
         
-        
-        
-        
+    ### SELL ###
+    elseif order_direction==1
+        sell_order()
+        sl_execute=check_sl_tp()
+        if sl_execute!=nothing; new_order=all_orders[sl_execute]; place_order(new_order); end 
+
+    end #End buy/sell
+    
+
+
+
+
+
+end #End place_order
+
+
+
+
