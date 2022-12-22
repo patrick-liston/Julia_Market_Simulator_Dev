@@ -666,3 +666,99 @@ stopped_order_id=check_sl_tp(fill_price, all_orders, order_direction, sl_buys, s
 everything=[all_orders, agent_info, buys_book, sells_book, sl_buys, sl_sells, executed_trades, fill_price]
 return everything
 end
+
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+##########################################################################
+#####        BUY ORDER       ####
+##########################################################################
+#Get all the prep stuff we need
+function buy_order()
+all_orders, agent_info, buys_book, sells_book, sl_buys, sl_sells, executed_trades, current_price = get_everything(everything)
+order_id, order_price, order_direction = get_order_info_quicker(new_order)
+fill_price=current_price #Required for local scope vriable
+
+
+#If there are no sells - we must place it in book - as it will not be matched
+if isempty(sells_book); buys_book=add_to_book(buys_book, order_price, order_id); everything[3]=buys_book; return everything ; end
+
+#### MAIN EXECUTION SECTION ####
+continue_executing=1
+#Otherwise - we need to check the buys_book to see if we can fill orders
+while all_orders[order_id][9]!=0 && continue_executing==1 && order_price>=first(sells_book)
+    fill_trade_id=sells_book[2][1]; fill_price=first(sells_book)
+
+    #1. Calculate amount filled
+    amount_filled=ifelse(all_orders[fill_trade_id][9]>=all_orders[order_id][9], all_orders[order_id][9], all_orders[fill_trade_id][9])
+
+    #2. Update all_orders table
+    all_orders = update_all_orders(all_orders, fill_trade_id, order_id, amount_filled)
+
+    #3. Remove order from sells_book - if filled
+    if all_orders[fill_trade_id][9]==0; sells_book = remove_order(sells_book, 1, 1); end
+
+    #4.Update executed orders table
+    append!(executed_trades, [[current_time, fill_price, amount_filled, fill_trade_id, order_id, order_direction]])
+
+    #5. Update agent_holdings positions
+    agent_info = update_agent_info(agent_info, fill_trade_id, agent_id, fill_price, amount_filled, order_direction )
+
+    # #6. Check to see if sl/tp orders are triggered
+    # stopped_order_id=check_sl_tp(fill_price, all_orders, order_direction, sl_buys, sl_sells)
+    # sl_buys, sl_sells = remove_sl_order(stopped_order_id, sl_buys, sl_sells)
+    # if  stopped_order_id>0;
+    #     everything = place_order(all_orders[stopped_order_id], everything, 45);  #45 is standing in for "cucrent_time" while testing
+    # end
+    # #Convert/Update the stop orders in all_orders to table (to enable execution)
+    # #all_orders[stopped_order_id][2]=ifelse(all_orders[stopped_order_id][4]==nothing, 0 , all_orders[stopped_order_id][2]+10)
+    # #Execute Stop order
+    # #place_trade(all_orders[stopped_order_id])
+
+
+    # #6.check if sells_book is empty/if continue_executing still == 1
+    # if isempty(sells_book); continue_executing=0; end #If there are no more buys in the book. Stop executing this loop. Put this here so we don't get reference errors for an empty list
+    #7.check if sells_book is empty/if continue_executing still == 1 - If there is still "order" to execute, place it into BUYS book
+    if isempty(sells_book); continue_executing=0; #Stop executing
+        if all_orders[order_id][9]!=0; buys_book=add_to_book(buys_book, order_price, order_id); end #Add the order into the sells book
+            everything=[all_orders, agent_info, buys_book, sells_book, sl_buys, sl_sells, executed_trades,fill_price]; return everything;
+     end #If there are no more buys in the book. Stop executing this loop. Put this here so we don't get reference errors for an empty list
+
+end #End while loop
+    #IF THIS IS A MARKET ORDER ORDER DON'T ADD THIS TO THE BOOK  - For now we will just keep the all_orders section the same (Otherwise it is more complicated - but mainly I don't see any real benifit to changing the all orders book to reflect that the order was not fully filled but would get ignored form now on)
+    #Coulnd't fill ANY order - append into book, and return everything
+    if all_orders[order_id][9]!=0 && new_order[4]!=0 ; buys_book=add_to_book(buys_book, order_price, order_id); end #Add the order into the sells book
+
+
+    #8. Output "Everything"
+    everything=[all_orders, agent_info, buys_book, sells_book, sl_buys, sl_sells, executed_trades, fill_price]
+    return everything
+
+end #End the function
+
+
+        
+        
+        
+        
+        
