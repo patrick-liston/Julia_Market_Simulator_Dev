@@ -826,3 +826,36 @@ end #End place_order
 
 
 
+
+            
+            
+            
+            
+new_orders=[1,3,0,100,nothing,10.5,1,10.5]
+new_order=OrderType2(1,3,0,100,nothing,10.5,1,10.5)
+new_order.time
+new_order.order_price
+
+
+function order_price_list(new_orders)
+  new_orders[4]
+end
+
+
+function order_price_struct(new_order)
+  new_order.order_price
+end
+
+@benchmark order_price_list(new_orders)
+@benchmark order_price_struct(new_order)
+
+mutable struct OrderType2
+  time::Int64
+  agent_id::Int64
+  order_type::Int64
+  order_price::Float64
+  order_trigger_price::Any
+  order_amount::Float64
+  order_direction::Int64
+  order_amount_remaining::Float64
+end
